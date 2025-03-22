@@ -44,7 +44,6 @@ class OrderController {
   }
 
   // Oldingi metodlar o‘zgarmagan holda qoladi: printOrderToPrinter, createOrder, closeOrder, getBill, getOrdersByTable, getOpenOrders, getSalesReport
-
   printOrderToPrinter = async (order, table, dishDetails, category) => {
     try {
       const printerConfig = this.PRINTERS[category];
@@ -85,29 +84,39 @@ class OrderController {
       const worker = await WorkerModel.findById(order.worker);
       if (!worker) throw new Error("Ofitsiant topilmadi");
 
+
       printer
-        .font("a")
+        .font("a") // Используем шрифт "a" (обычный шрифт)
+        .size(1, 1) // Обычный размер шрифта
         .align("ct")
         .style("bu")
-        .size(1, 1)
         .text("Buyurtma")
-        .text("---------------")
+        .text("\n") // Одна пустая строка вместо нескольких
         .align("lt")
         .text(`Stol raqami: ${table.number}`)
-        .text(`Ofitsiant: ${worker.fullname}`)
-        .text("Taomlar:");
+        .text(`Ofitsiant:`)
+        .text(`${worker.fullname}`)
+        .text("Taomlar:")
+
+      
 
       dishDetails.forEach((item) => {
         let unit = item.category === "drink" ? "litr" : "dona";
         printer.text(`${item.quantity}x ${item.name} (${unit})`);
       });
 
-      printer.text("---------------").align("ct").cut().close();
+      printer
+        .text("\n\n\n\n")
+        .align("ct")
+        .cut()
+        .close();
     } catch (err) {
       console.error(`Chop etishda xato (${category}):`, err.message);
       throw new Error(`Printer bilan muammo (${category}): ${err.message}`);
     }
   };
+
+
   createOrder = async (req, res) => {
     try {
       let io = req.app.get("socket");
@@ -212,7 +221,7 @@ class OrderController {
 
 
 
-  // Adding printReceipt function to OrderController
+  // примнтер для заказа закрытия заказов
   printReceipt = async (items, total) => {
     try {
       const printerIp = process.env.PRINTER_TOTAL_IP || '192.168.1.49';
@@ -241,17 +250,16 @@ class OrderController {
       aggregatedItems.forEach((item, index) => {
         const name = item.food.name.slice(0, 10).padEnd(10, ' ');
         const qty = item.quantity.toString().padStart(2, ' ');
-        const amount = (item.food.price * item.quantity).toLocaleString();
-        receipt += `> ${name}${qty} ${amount}UZS`; // No extra newline here
+        const amount = (item.food.price * item.quantity).toLocaleString('en-US', { maximumFractionDigits: 0 }).replace(/,/g, ' '); // Убираем запятые и заменяем на пробелы
+        receipt += `> ${name}${qty}-ta ${amount} UZS`;
         if (index < aggregatedItems.length - 1) receipt += '\n\n'; // Add space after each item except last
       });
 
       receipt += '\n-------------------------------\n'; // Minimal separator
-      receipt += `Umumiy hisob ${total.toLocaleString()}UZS\n`;
+      receipt += `Umumiy hisob ${total.toLocaleString('en-US', { maximumFractionDigits: 0 }).replace(/,/g, ' ')} UZS\n`; // Форматируем общую сумму
       receipt += '\n-------------------------------\n'; // Minimal separator
       receipt += 'Tanlov uchun rahmat\n'; // Creative thank-you
       receipt += '\n\n\n\n'; // Добавляем 2 пустые строки для отступа ~10px
-
 
       // Asynchronous printing with styling
       return new Promise((resolve, reject) => {
@@ -260,12 +268,11 @@ class OrderController {
             console.error('Printer connection error:', err);
             return reject(new Error(`Connection error: ${err.message}`));
           }
-
           printer
             .font('b') // Smaller font
             .align('ct') // Center alignment for header
             .style('bu') // Bold underline for header
-            .text('Restorant - ASH13\n') // Bold restaurant name
+            .text('Restoran - Fettuccine\n') // Bold restaurant name
             .style('normal')
             .align('lt') // Left align for items
             .text(receipt) // Print receipt
@@ -284,6 +291,7 @@ class OrderController {
       throw error;
     }
   };
+
 
 
  // Updated closeOrder to ensure table status is updated

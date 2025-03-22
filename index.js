@@ -25,6 +25,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+
+
+
 (async () => {
   await connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDBga ulanish muvaffaqiyatli! ✅✅✅"))
@@ -40,6 +43,8 @@ app.use(
 );
 app.get("/", (req, res) => res.send("Salom dunyo"));
 app.use(notfound);
+
+
 
 
 const PORT = process.env.PORT || 8080;
